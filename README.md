@@ -1,2 +1,2 @@
 # G-oGalup
-Application d'apprentissage de géolocalisation de photographies anciennes.
+Application créer dans une optique d'aprentissage. Application degéolocalisation de photographies anciennes.
