@@ -92,6 +92,128 @@
             transform: translateY(-1px);
         }
 
+        .about-btn {
+            background: none;
+            border: 1.5px solid rgba(26, 42, 58, 0.25);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .about-btn:hover {
+            background: rgba(26, 42, 58, 0.07);
+            transform: translateY(-1px);
+        }
+
+        /* Modale À propos */
+        #about-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #about-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .about-modal-box {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 40px;
+            max-width: 480px;
+            width: calc(100% - 40px);
+            position: relative;
+            animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .about-modal-box h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.6rem;
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .about-modal-box .about-subtitle {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+
+        .about-modal-box p {
+            color: #374151;
+            line-height: 1.7;
+            margin: 0 0 16px 0;
+            font-size: 0.95rem;
+        }
+
+        .about-modal-box .about-accent {
+            display: inline-block;
+            background: rgba(212, 175, 55, 0.15);
+            color: #92740e;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .about-divider {
+            border: none;
+            border-top: 1px solid rgba(0, 0, 0, 0.07);
+            margin: 20px 0;
+        }
+
+        .about-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .about-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
         /* Map Container */
         #map {
             position: absolute;
@@ -358,9 +480,33 @@
         <header>
             <div class="logo-container">
                 <h1>HierIci</h1>
+                <button class="about-btn" onclick="openAbout()">À propos</button>
                 <a href="/admin/" class="admin-link">Admin</a>
             </div>
         </header>
+
+        <div id="about-modal" onclick="closeAbout(event)">
+            <div class="about-modal-box" onclick="event.stopPropagation()">
+                <button class="about-close" onclick="closeAbout()">&times;</button>
+                <h2>HierIci</h2>
+                <div class="about-subtitle">Exploration des photographies historiques géolocalisées</div>
+                <p>
+                    <strong>HierIci</strong> est une application de cartographie interactive permettant
+                    de visualiser et explorer des photographies anciennes géolocalisées sur le territoire d'Albi et de
+                    sa région.
+                </p>
+                <p>
+                    Chaque marqueur sur la carte représente une photographie prise depuis ce point.
+                    La direction de la flèche indique <span class="about-accent">l'orientation de la prise de
+                        vue</span>.
+                </p>
+                <hr class="about-divider">
+                <p style="margin:0; font-size:0.85rem; color:#6b7280;">
+                    Cliquez sur un marqueur pour découvrir la photographie et ses informations.
+                    Cliquez sur la photo pour l'agrandir.
+                </p>
+            </div>
+        </div>
 
         <div id="map"></div>
 
@@ -389,11 +535,28 @@
     <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.15.1/build/ol.js"></script>
 
     <script>
-        let map, vectorSource, vectorLayer, selectInteraction;
+        let map, vectorSource, vectorLayer;
 
         function closePanel() {
             document.getElementById('side-panel').classList.remove('open');
         }
+
+        function openAbout() {
+            const m = document.getElementById('about-modal');
+            m.style.display = 'flex';
+            // Force reflow pour déclencher la transition
+            requestAnimationFrame(() => m.classList.add('active'));
+        }
+
+        function closeAbout(event) {
+            const m = document.getElementById('about-modal');
+            m.classList.remove('active');
+            setTimeout(() => { m.style.display = 'none'; }, 300);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeAbout();
+        });
 
         function openModal(imgSrc, title) {
             const modal = document.getElementById('image-modal');
@@ -425,8 +588,8 @@
                     })
                 ],
                 view: new ol.View({
-                    center: ol.proj.fromLonLat([1.4442, 43.6047]),
-                    zoom: 6
+                    center: ol.proj.fromLonLat([2.1481, 43.9269]),
+                    zoom: 14
                 })
             });
 
@@ -441,8 +604,6 @@
                 source: vectorSource
             });
 
-            // Cache pour les styles d'icônes individuelles afin d'éviter la recréation
-            const styleCache = {};
 
             vectorLayer = new ol.layer.Vector({
                 source: clusterSource,

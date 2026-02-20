@@ -7,7 +7,7 @@
 </div>
 <script>
     (function () {
-        console.log("Azimuth: Version 18.1 - Syntax Fix");
+
         const azIn = document.getElementById("id_azimuth");
         if (!azIn) return;
 
@@ -16,14 +16,14 @@
 
         function patchWidget() {
             if (typeof MapWidget !== "undefined" && !MapWidget._az_patched) {
-                console.log("Azimuth: Patching MapWidget prototype");
+
                 const origCreateMap = MapWidget.prototype.createMap;
                 MapWidget.prototype.createMap = function () {
                     const map = origCreateMap.apply(this, arguments);
                     const self = this;
                     setTimeout(() => {
                         if (self.featureOverlay) {
-                            console.log("Azimuth: Customizing widget instance");
+
                             const getStyle = () => {
                                 const a = parseInt(azIn.value) || 0;
                                 return new ol.style.Style({
@@ -38,7 +38,7 @@
                                 const oe = evt.originalEvent;
                                 const modifier = (oe && (oe.altKey || oe.shiftKey)) || evt.altKey || evt.shiftKey;
                                 if (modifier) {
-                                    console.log("Azimuth: Modifier click detected!");
+
                                     const fs = self.featureOverlay.getSource().getFeatures();
                                     if (fs.length > 0) {
                                         const p = fs[0].getGeometry().getCoordinates();
@@ -47,12 +47,12 @@
                                         let a = Math.atan2(dx, dy) * (180 / Math.PI);
                                         if (a < 0) a += 360;
                                         azIn.value = Math.round(a);
-                                        console.log("Azimuth: New angle computed", azIn.value);
+
                                         azIn.dispatchEvent(new Event("change"));
                                         self.featureOverlay.changed();
                                         evt.preventDefault();
                                     } else {
-                                        console.log("Azimuth: No features found in featureOverlay source");
+
                                     }
                                 }
                             });
