@@ -382,6 +382,48 @@
             left: 20px !important;
         }
 
+        /* Layer Switcher */
+        #layer-switcher {
+            position: absolute;
+            bottom: 20px;
+            left: 80px;
+            z-index: 1000;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 8px;
+            display: flex;
+            flex-direction: row;
+            gap: 6px;
+        }
+
+        .layer-btn {
+            border: 1.5px solid transparent;
+            background: rgba(26, 42, 58, 0.06);
+            color: var(--primary);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .layer-btn:hover {
+            background: rgba(26, 42, 58, 0.12);
+        }
+
+        .layer-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
         /* Responsive Mobile */
         @media (max-width: 600px) {
             :root {
@@ -510,6 +552,15 @@
 
         <div id="map"></div>
 
+        <!-- Layer Switcher -->
+        <div id="layer-switcher">
+            <button class="layer-btn active" data-layer="voyager" onclick="switchBaseLayer('voyager')">Carte</button>
+            <button class="layer-btn" data-layer="ortho1950" onclick="switchBaseLayer('ortho1950')">Ortho
+                1950–1965</button>
+            <button class="layer-btn" data-layer="ortho1965" onclick="switchBaseLayer('ortho1965')">Ortho
+                1965–1980</button>
+        </div>
+
         <aside id="side-panel">
             <button class="close-panel" onclick="closePanel()">&times;</button>
             <div id="panel-photo" class="photo-container">
@@ -575,17 +626,89 @@
             document.body.style.overflow = ''; // Restore scrolling
         }
 
+        // Grille tuile WMTS standard pour la projection PM (pseudo-Mercator, EPSG:3857)
+        // PM_0_18 : niveaux 0-18 (couche 1950-1965)
+        // PM_3_18 : niveaux 3-18 (couche 1965-1980)
+        const pmOrigin = [-20037508.3428, 20037508.3428];
+        const pmResolutions = Array.from({ length: 19 }, (_, i) =>
+            156543.03392811998 / Math.pow(2, i)
+        );
+        const pmMatrixIds018 = pmResolutions.map((_, i) => String(i));
+
+        function makePM018TileGrid() {
+            return new ol.tilegrid.WMTS({
+                origin: pmOrigin,
+                resolutions: pmResolutions,
+                matrixIds: pmMatrixIds018
+            });
+        }
+
+        // PM_3_18 : niveaux 3 à 18 seulement
+        const pmResolutions318 = pmResolutions.slice(3); // index 3..18
+        const pmMatrixIds318 = pmResolutions318.map((_, i) => String(i + 3));
+
+        function makePM318TileGrid() {
+            return new ol.tilegrid.WMTS({
+                origin: pmOrigin,
+                resolutions: pmResolutions318,
+                matrixIds: pmMatrixIds318
+            });
+        }
+
+        // Définition des fonds de plan
+        const baseLayers = {
+            voyager: new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                    url: 'https://{a-c}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                    attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                }),
+                visible: true
+            }),
+            ortho1950: new ol.layer.Tile({
+                source: new ol.source.WMTS({
+                    url: 'https://data.geopf.fr/wmts',
+                    layer: 'ORTHOIMAGERY.ORTHOPHOTOS.1950-1965',
+                    matrixSet: 'PM_0_18',
+                    format: 'image/png',
+                    style: 'normal',
+                    tileGrid: makePM018TileGrid(),
+                    attributions: '&copy; <a href="https://www.geoportail.gouv.fr">Géoportail (IGN)</a>',
+                    crossOrigin: 'anonymous'
+                }),
+                visible: false
+            }),
+            ortho1965: new ol.layer.Tile({
+                source: new ol.source.WMTS({
+                    url: 'https://data.geopf.fr/wmts',
+                    layer: 'ORTHOIMAGERY.ORTHOPHOTOS.1965-1980',
+                    matrixSet: 'PM_3_18',
+                    format: 'image/png',
+                    style: 'BDORTHOHISTORIQUE',
+                    tileGrid: makePM318TileGrid(),
+                    attributions: '&copy; <a href="https://www.geoportail.gouv.fr">Géoportail (IGN)</a>',
+                    crossOrigin: 'anonymous'
+                }),
+                visible: false
+            })
+        };
+
+        function switchBaseLayer(key) {
+            Object.keys(baseLayers).forEach(k => {
+                baseLayers[k].setVisible(k === key);
+            });
+            document.querySelectorAll('.layer-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.layer === key);
+            });
+        }
+
         window.onload = function () {
-            // 1. Initialisation de la carte avec CartoDB Voyager
+            // 1. Initialisation de la carte
             map = new ol.Map({
                 target: 'map',
                 layers: [
-                    new ol.layer.Tile({
-                        source: new ol.source.XYZ({
-                            url: 'https://{a-c}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                            attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                        })
-                    })
+                    baseLayers.voyager,
+                    baseLayers.ortho1950,
+                    baseLayers.ortho1965
                 ],
                 view: new ol.View({
                     center: ol.proj.fromLonLat([2.1481, 43.9269]),
